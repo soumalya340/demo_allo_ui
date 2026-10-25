@@ -127,27 +127,11 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           <button
             onClick={() =>
               setNotice(
-                "IPO Calendar is coming soon. Explore companies using the IPO Watch filter on the Board.",
-              )
-            }
-          >
-            IPO CALENDAR <span className="soon">SOON</span>
-          </button>
-          <button
-            onClick={() =>
-              setNotice(
                 "About Allo: discover community-created coins inspired by private companies. This preview uses sample market data; coins do not represent company equity.",
               )
             }
           >
             DOCS ↗
-          </button>
-          <button
-            onClick={() =>
-              setNotice("Community links will be available when Allo launches.")
-            }
-          >
-            COMMUNITY⌄
           </button>
         </nav>
         <div className="header-actions">

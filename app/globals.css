@@ -1234,9 +1234,6 @@ input[type="range"] {
   .site-header nav {
     gap: 20px;
   }
-  .site-header nav > button:last-child {
-    display: none;
-  }
   .language {
     display: none;
   }
@@ -1267,9 +1264,6 @@ input[type="range"] {
   }
   .site-header nav {
     gap: 22px;
-  }
-  .site-header nav > button {
-    display: none;
   }
   .header-actions {
     gap: 8px;
