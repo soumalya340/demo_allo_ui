@@ -1,6 +1,6 @@
 import "server-only";
 export async function proxyBackend(
-  endpoint: "health" | "launch" | "get-all-pool-info",
+  endpoint: "health" | "launch" | "get-all-pool-info" | "pool-info" | "buy-exact-in" | "sell",
   request: Request,
 ) {
   const base = process.env.ALLO_API_URL || "http://62.72.58.104:3018";
@@ -28,6 +28,11 @@ export async function proxyBackend(
       ]);
       for (const [key, value] of new URL(request.url).searchParams)
         if (allowed.has(key)) target.searchParams.set(key, value);
+    }
+    if (["pool-info", "buy-exact-in", "sell"].includes(endpoint)) {
+      const allowed = endpoint === "pool-info" ? ["pool", "holder"] : ["pool", "amountIn", "tokenAmount", "slippageBps", "from"];
+      for (const [key, value] of new URL(request.url).searchParams)
+        if (allowed.includes(key)) target.searchParams.set(key, value);
     }
     const response = await fetch(target, {
       cache: "no-store",

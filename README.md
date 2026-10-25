@@ -63,6 +63,14 @@ Newest launches appear first. Search supports name, symbol, contract, and creato
 node --experimental-strip-types --test tests/board-api.test.mjs
 ```
 
+## Coin detail and trading
+
+Click a coin ticker on the Board to open `/coin/[pool]`. The page reads `/api/pool-info` every 15 seconds for curve progress, reserves, supply, prices, metadata, and the connected holder’s balance. Native BNB pools support buy quotes via `/api/buy-exact-in` and sell quotes via `/api/sell`, with configurable slippage and wallet confirmation on chain 97. Quotes expire after 60 seconds; changing the amount, side, slippage, wallet, or chain invalidates the displayed quote. Pending transactions block duplicate submissions. Successful trades refresh balances and indexed data. Graduated and migrated curves are closed for trading; non-BNB pools show information only.
+
+```sh
+node --experimental-strip-types --test tests/trade-api.test.mjs
+```
+
 ## Coin image upload
 
 Connect a **public** Vercel Blob store to the project and configure the server-only `BLOB_READ_WRITE_TOKEN` (in `.env.local` for local development). The installed `@vercel/blob` SDK reads this token; never expose it with a `NEXT_PUBLIC_` prefix.

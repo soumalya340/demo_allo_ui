@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import Image from "next/image";
@@ -59,149 +59,13 @@ function CoinAvatar({ coin }: { coin: LaunchedCoin }) {
     </span>
   );
 }
-function CoinDetails({
-  coin,
-  onClose,
-}: {
-  coin: LaunchedCoin;
-  onClose: () => void;
-}) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    dialog.current?.showModal();
-  }, []);
-  return (
-    <dialog
-      ref={dialog}
-      className="coin-dialog"
-      onClose={onClose}
-      onClick={(event) => {
-        if (event.target === dialog.current) dialog.current?.close();
-      }}
-    >
-      <section className="coin-modal">
-        <button
-          className="modal-close"
-          onClick={() => dialog.current?.close()}
-          aria-label="Close coin details"
-        >
-          ×
-        </button>
-        <div className="coin-identity">
-          <CoinAvatar coin={coin} />
-          <div>
-            <h2>{coin.name}</h2>
-            <span className="coin-name">${coin.symbol}</span>
-          </div>
-        </div>
-        <p>{coin.description || "A coin launched on Allo."}</p>
-        <span className="company-tag">{coinStatus(coin)}</span>
-        <div className="card-price">
-          {coin.migrated
-            ? "On PancakeSwap"
-            : `${formatAmount(coin.currentPrice)} ${coin.quoteToken.symbol}`}
-        </div>
-        <div className="card-stats">
-          <span>
-            TOTAL SUPPLY<strong>{formatAmount(coin.totalSupply)}</strong>
-          </span>
-          <span>
-            CURVE RESERVE
-            <strong>
-              {formatAmount(coin.quoteReserve)} {coin.quoteToken.symbol}
-            </strong>
-          </span>
-        </div>
-        <Curve coin={coin} />
-        <dl className="coin-detail-list">
-          <dt>Contract</dt>
-          <dd>
-            <a
-              href={`${explorer}/address/${coin.pool}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {coin.pool} ↗
-            </a>
-          </dd>
-          <dt>Creator</dt>
-          <dd>
-            {/^0x[a-fA-F0-9]{40}$/.test(coin.creator) ? (
-              <a
-                href={`${explorer}/address/${coin.creator}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {shortAddress(coin.creator)} ↗
-              </a>
-            ) : (
-              "—"
-            )}
-          </dd>
-          <dt>Buy / sell tax</dt>
-          <dd>
-            {coin.buyFeeBps / 100}% / {coin.sellFeeBps / 100}%
-          </dd>
-          <dt>Graduation threshold</dt>
-          <dd>
-            {formatAmount(coin.graduationThreshold)} {coin.quoteToken.symbol}
-          </dd>
-        </dl>
-        <div className="coin-detail-links">
-          {safeLink(coin.website) && (
-            <a
-              href={safeLink(coin.website)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Website ↗
-            </a>
-          )}
-          {safeLink(coin.twitter) && (
-            <a
-              href={safeLink(coin.twitter)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              X / Twitter ↗
-            </a>
-          )}
-          {coin.launch?.txHash &&
-            /^0x[a-fA-F0-9]{64}$/.test(coin.launch.txHash) && (
-              <a
-                href={`${explorer}/tx/${coin.launch.txHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Launch transaction ↗
-              </a>
-            )}
-          {coin.migrated && /^0x[a-fA-F0-9]{40}$/.test(coin.pair) && (
-            <a
-              href={`${explorer}/address/${coin.pair}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Liquidity pair ↗
-            </a>
-          )}
-        </div>
-        <p className="muted">
-          State from the Allo indexer. Prices and reserves are in the coin’s
-          quote token. Migrated coins no longer trade on the curve.
-        </p>
-      </section>
-    </dialog>
-  );
-}
 export default function Board() {
   const [category, setCategory] = useState("All launches"),
     [query, setQuery] = useState(""),
     [grid, setGrid] = useState(false),
     [ascending, setAscending] = useState(false),
     [sort, setSort] = useState("index"),
-    [watched, setWatched] = useState<string[]>([]),
-    [selectedAddress, setSelectedAddress] = useState<string | null>(null);
+    [watched, setWatched] = useState<string[]>([]);
   const { data, error, isPending, isFetching, refetch } = useQuery({
     queryKey: ["launched-coins", 97],
     queryFn: ({ signal }) => fetchLaunchedCoins(signal),
@@ -210,7 +74,6 @@ export default function Board() {
     retry: 1,
   });
   const coins = data?.pools || [];
-  const selected = coins.find((coin) => coin.pool === selectedAddress);
   const filtered = coins
     .filter(
       (coin) =>
@@ -246,12 +109,12 @@ export default function Board() {
   function identity(coin: LaunchedCoin) {
     return (
       <div className="coin-identity">
-        <CoinAvatar key={coin.imageUrl} coin={coin} />
+        <Link href={`/coin/${coin.pool}`} aria-label={`View ${coin.name}`}><CoinAvatar key={coin.imageUrl} coin={coin} /></Link>
         <div>
           <div className="coin-title">
-            <button onClick={() => setSelectedAddress(coin.pool)}>
+            <Link href={`/coin/${coin.pool}`}>
               ${coin.symbol}
-            </button>
+            </Link>
             <button
               className={`watch ${watched.includes(coin.pool) ? "watched" : ""}`}
               onClick={() =>
@@ -267,7 +130,7 @@ export default function Board() {
               <Icon name="bell" size={14} />
             </button>
           </div>
-          <span className="coin-name">{coin.name}</span>
+          <Link className="coin-name" href={`/coin/${coin.pool}`}>{coin.name}</Link>
         </div>
       </div>
     );
@@ -586,9 +449,6 @@ export default function Board() {
           · AUTO-REFRESH 15S
         </span>
       </div>
-      {selected && (
-        <CoinDetails coin={selected} onClose={() => setSelectedAddress(null)} />
-      )}
     </main>
   );
 }

@@ -115,7 +115,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         <nav aria-label="Main navigation">
           <Link
             className={
-              pathname === "/" || pathname === "/board" ? "active" : ""
+              pathname === "/" || pathname === "/board" || pathname.startsWith("/coin/") ? "active" : ""
             }
             href="/"
           >

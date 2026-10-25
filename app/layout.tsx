@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "@rainbow-me/rainbowkit/styles.css";
@@ -29,7 +30,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <WalletProvider>
-          <Shell>{children}</Shell>
+          <Suspense fallback={<main id="main" className="coin-page">Loading Allo…</main>}>
+            <Shell>{children}</Shell>
+          </Suspense>
         </WalletProvider>
       </body>
     </html>
