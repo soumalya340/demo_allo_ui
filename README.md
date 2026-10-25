@@ -40,3 +40,15 @@ RainbowKit, wagmi 2, viem 2, and TanStack Query provide browser wallet discovery
 Browser extension wallets work without additional configuration. Set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` in `.env.local` to your Reown project ID to enable WalletConnect QR/mobile wallets, then restart the dev server (or rebuild for production). There is no placeholder project ID. Optionally set `NEXT_PUBLIC_BSC_TESTNET_RPC_URL` to a chain-97 RPC.
 
 Connecting a wallet does not sign or submit a transaction. Prepared transactions remain downloadable for separate signing.
+
+## Documentation pages
+
+`/docs` renders the protocol overview, `/docs/functions` the contract reference, and `/docs/endpoints` the API reference. Content is bundled from the three supplied Markdown files, so deployment does not depend on the sibling repository being present. Original Markdown downloads are available in `public/docs`.
+
+To refresh the source snapshots after editing the protocol docs:
+
+```sh
+npm run docs:sync -- ../allo_xyz
+```
+
+Relative links to the included documents navigate within the Docs section. Other repository paths are displayed as repository references; external explorer links open in a new tab.

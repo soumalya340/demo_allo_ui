@@ -2,7 +2,6 @@
 import Link from "next/link";
 import WalletButton from "./wallet-button";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 
 export function PixelLogo() {
   return (
@@ -103,7 +102,6 @@ export function Icon({ name, size = 18 }: { name: string; size?: number }) {
 }
 export default function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [notice, setNotice] = useState("");
   return (
     <>
       <a className="skip-link" href="#main">
@@ -115,7 +113,12 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           <span>ALLO</span>
         </Link>
         <nav aria-label="Main navigation">
-          <Link className={pathname !== "/launch" ? "active" : ""} href="/">
+          <Link
+            className={
+              pathname === "/" || pathname === "/board" ? "active" : ""
+            }
+            href="/"
+          >
             BOARD
           </Link>
           <Link
@@ -124,15 +127,12 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           >
             LAUNCH
           </Link>
-          <button
-            onClick={() =>
-              setNotice(
-                "About Allo: discover community-created coins inspired by private companies. This preview uses sample market data; coins do not represent company equity.",
-              )
-            }
+          <Link
+            href="/docs"
+            className={pathname.startsWith("/docs") ? "active" : ""}
           >
             DOCS ↗
-          </button>
+          </Link>
         </nav>
         <div className="header-actions">
           <span className="network">
@@ -147,7 +147,12 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       {children}
       <footer className="site-footer">
         <span>
-          <i /> {pathname === "/launch" ? "LAUNCH SERVICE" : "DEMO MARKET DATA"}{" "}
+          <i />{" "}
+          {pathname.startsWith("/docs")
+            ? "PROTOCOL DOCUMENTATION"
+            : pathname === "/launch"
+              ? "LAUNCH SERVICE"
+              : "DEMO MARKET DATA"}{" "}
           <span className="footer-divider">/</span> BSC TESTNET · CHAIN 97
         </span>
         <span>
@@ -156,17 +161,6 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           <span className="demo-label">DEMO DATA</span>
         </span>
       </footer>
-      {notice && (
-        <div className="notice" role="status">
-          <span>{notice}</span>
-          <button
-            onClick={() => setNotice("")}
-            aria-label="Dismiss notification"
-          >
-            ×
-          </button>
-        </div>
-      )}
     </>
   );
 }

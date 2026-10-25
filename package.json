@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "docs:sync": "node scripts/sync-docs.mjs"
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "^2.2.11",
@@ -14,6 +15,8 @@
     "next": "16.4.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "viem": "^2.57.11",
     "wagmi": "^2.19.5"
   },
