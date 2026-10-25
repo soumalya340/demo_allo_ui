@@ -1603,3 +1603,64 @@ input[type="range"] {
     scroll-behavior: auto !important;
   }
 }
+
+.launch-form button:disabled,
+.launch-form input:disabled,
+.launch-form select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.launch-form .quote-address {
+  margin-top: 18px;
+}
+.launch-error {
+  padding: 16px;
+  border: 1px solid #edb6ac;
+  background: #fff3f0;
+  color: #a23626;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+.launch-review {
+  border: 1px solid #d8bc56;
+  background: #fffdf4;
+  padding: 22px;
+  margin-bottom: 24px;
+}
+.launch-review h2 {
+  font-size: 19px;
+  font-weight: 600;
+}
+.launch-review p {
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 12px 0;
+  color: #737b65;
+}
+.launch-review dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 20px 0;
+}
+.launch-review dt {
+  font-size: 10px;
+  color: #818975;
+}
+.launch-review dd {
+  font: 12px var(--mono);
+  margin: 5px 0;
+  overflow-wrap: anywhere;
+}
+.launch-review details {
+  margin-top: 20px;
+  font-size: 12px;
+}
+.launch-review pre {
+  font: 10px/1.7 var(--mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-top: 12px;
+  max-height: 350px;
+  overflow: auto;
+}

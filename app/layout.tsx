@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import "@rainbow-me/rainbowkit/styles.css";
 import "./globals.css";
+import WalletProvider from "./components/wallet-provider";
 import Shell from "./components/shell";
 
 const geistSans = Geist({
@@ -26,7 +28,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Shell>{children}</Shell>
+        <WalletProvider>
+          <Shell>{children}</Shell>
+        </WalletProvider>
       </body>
     </html>
   );

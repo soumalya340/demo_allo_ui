@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import WalletButton from "./wallet-button";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
@@ -151,28 +152,19 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="header-actions">
           <span className="network">
-            <i /> BASE
+            <i /> BSC TESTNET · 97
           </span>
           <span className="language">
             <Icon name="globe" /> EN
           </span>
-          <button
-            className="wallet-button"
-            onClick={() =>
-              setNotice(
-                "Wallet connection is not enabled in this UI preview. No wallet connection or transaction has been initiated.",
-              )
-            }
-          >
-            <Icon name="wallet" /> CONNECT WALLET
-          </button>
+          <WalletButton />
         </div>
       </header>
       {children}
       <footer className="site-footer">
         <span>
-          <i /> ALL SYSTEMS OPERATIONAL{" "}
-          <span className="footer-divider">/</span> BASE NETWORK
+          <i /> {pathname === "/launch" ? "LAUNCH SERVICE" : "DEMO MARKET DATA"}{" "}
+          <span className="footer-divider">/</span> BSC TESTNET · CHAIN 97
         </span>
         <span>
           BUILT FOR THE NEXT BIG THING.{" "}
