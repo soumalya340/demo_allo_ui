@@ -1,11 +1,93 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import {launchParams,requestLaunch} from '../app/lib/launch-api.ts';
-const form=()=>{const f=new FormData();for(const [k,v] of Object.entries({coinName:'Example & Coin',ticker:'test',totalSupply:'1000000',graduationThreshold:'10.123456789012345678',purchase:'0',description:'A coin + a company'}))f.set(k,v);return f;};
-test('maps fields, preserves decimal precision, encodes text, and omits a zero first buy',()=>{
- const q=launchParams(form(),2,1,[40,20,20,20],'BNB');
- assert.equal(q.get('name'),'Example & Coin');assert.equal(new URLSearchParams(q.toString()).get('description'),'A coin + a company');assert.equal(q.get('symbol'),'TEST');assert.equal(q.get('buyFeeBps'),'200');assert.equal(q.get('holdersBps'),'2000');assert.equal(q.get('quoteToken'),'native');assert.equal(q.get('graduationThreshold'),'10.123456789012345678');assert.equal(q.has('firstBuyAmount'),false);
+import test from "node:test";
+import assert from "node:assert/strict";
+import { launchParams, requestLaunch } from "../app/lib/launch-api.ts";
+const form = () => {
+  const f = new FormData();
+  for (const [k, v] of Object.entries({
+    coinName: "Example & Coin",
+    ticker: "test",
+    graduationThreshold: "10.123456789012345678",
+    purchase: "0",
+    description: "A coin + a company",
+  }))
+    f.set(k, v);
+  return f;
+};
+test("maps fields, preserves decimal precision, encodes text, and omits a zero first buy", () => {
+  const q = launchParams(form(), 2, 1, [40, 20, 20, 20], "BNB");
+  assert.equal(q.get("name"), "Example & Coin");
+  assert.equal(
+    new URLSearchParams(q.toString()).get("description"),
+    "A coin + a company",
+  );
+  assert.equal(q.get("symbol"), "TEST");
+  assert.equal(q.get("buyFeeBps"), "200");
+  assert.equal(q.get("holdersBps"), "2000");
+  assert.equal(q.get("quoteToken"), "native");
+  assert.equal(q.get("graduationThreshold"), "10.123456789012345678");
+  assert.equal(q.has("firstBuyAmount"), false);
 });
-test('maps ERC20 address, sender, and positive first buy',()=>{const f=form();const address='0x'+'1'.repeat(40);f.set('quoteToken',address);f.set('from',address);f.set('purchase','1.5');const q=launchParams(f,1,1,[40,20,20,20],'ERC20');assert.equal(q.get('quoteToken'),address);assert.equal(q.get('from'),address);assert.equal(q.get('firstBuyAmount'),'1.5');});
-test('rejects invalid allocation, missing amounts, invalid token and sender',()=>{assert.throws(()=>launchParams(form(),1,1,[40,20,20,10],'BNB'),/100%/);const f=form();f.set('totalSupply','0');assert.throws(()=>launchParams(f,1,1,[40,20,20,20],'BNB'),/positive/);assert.throws(()=>launchParams(form(),1,1,[40,20,20,20],'ERC20'),/contract address/);const g=form();g.set('from','bad');assert.throws(()=>launchParams(g,1,1,[40,20,20,20],'BNB'),/wallet address/);});
-test('surfaces backend errors and rejects malformed success responses',async()=>{const original=global.fetch;try{global.fetch=async()=>Response.json({message:'Token not allowed'},{status:400});await assert.rejects(()=>requestLaunch(new URLSearchParams()),/Token not allowed/);global.fetch=async()=>Response.json({chainId:97});await assert.rejects(()=>requestLaunch(new URLSearchParams()),/incomplete/);}finally{global.fetch=original;}});
+test("maps ERC20 address, sender, and positive first buy", () => {
+  const f = form();
+  const address = "0x" + "1".repeat(40);
+  f.set("quoteToken", address);
+  f.set("from", address);
+  f.set("purchase", "1.5");
+  const q = launchParams(f, 1, 1, [40, 20, 20, 20], "ERC20");
+  assert.equal(q.get("quoteToken"), address);
+  assert.equal(q.get("from"), address);
+  assert.equal(q.get("firstBuyAmount"), "1.5");
+});
+test("rejects invalid allocation, missing amounts, invalid token and sender", () => {
+  assert.throws(
+    () => launchParams(form(), 1, 1, [40, 20, 20, 10], "BNB"),
+    /100%/,
+  );
+  const f = form();
+  f.set("graduationThreshold", "0");
+  assert.throws(
+    () => launchParams(f, 1, 1, [40, 20, 20, 20], "BNB"),
+    /positive/,
+  );
+  assert.throws(
+    () => launchParams(form(), 1, 1, [40, 20, 20, 20], "ERC20"),
+    /contract address/,
+  );
+  const g = form();
+  g.set("from", "bad");
+  assert.throws(
+    () => launchParams(g, 1, 1, [40, 20, 20, 20], "BNB"),
+    /wallet address/,
+  );
+});
+test("surfaces backend errors and rejects malformed success responses", async () => {
+  const original = global.fetch;
+  try {
+    global.fetch = async () =>
+      Response.json({ message: "Token not allowed" }, { status: 400 });
+    await assert.rejects(
+      () => requestLaunch(new URLSearchParams()),
+      /Token not allowed/,
+    );
+    global.fetch = async () => Response.json({ chainId: 97 });
+    await assert.rejects(
+      () => requestLaunch(new URLSearchParams()),
+      /incomplete/,
+    );
+  } finally {
+    global.fetch = original;
+  }
+});
+
+test("always sends one billion coins without asking for supply", () => {
+  const f = form();
+  assert.equal(
+    launchParams(f, 1, 1, [40, 20, 20, 20], "BNB").get("totalSupply"),
+    "1000000000",
+  );
+  f.set("totalSupply", "123");
+  assert.equal(
+    launchParams(f, 1, 1, [40, 20, 20, 20], "BNB").get("totalSupply"),
+    "1000000000",
+  );
+});

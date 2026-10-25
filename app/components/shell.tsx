@@ -127,6 +127,13 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           >
             LAUNCH
           </Link>
+          <a
+            href="https://www.bnbchain.org/en/testnet-faucet"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            FAUCET ↗
+          </a>
           <Link
             href="/docs"
             className={pathname.startsWith("/docs") ? "active" : ""}

@@ -2186,3 +2186,58 @@ input[type="range"] {
   margin-top: 20px;
   font-size: 11px;
 }
+
+.launch-fields {
+  border: 0;
+  margin: 0;
+  min-width: 0;
+}
+.image-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  font: 10px/1.6 var(--mono);
+  color: #8b937d;
+  overflow-wrap: anywhere;
+}
+.image-selection button {
+  align-self: flex-start;
+  padding: 0;
+  color: #98740c;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.image-uploaded {
+  font: 10px var(--mono);
+  color: #54875a;
+  margin-top: 12px;
+}
+
+@media (max-width: 560px) {
+  .site-header {
+    gap: 10px;
+  }
+  .site-header nav {
+    gap: 10px;
+    font-size: 8px;
+  }
+}
+@media (max-width: 370px) {
+  .site-header {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 96px;
+    padding-top: 10px;
+  }
+  .site-header nav {
+    order: 3;
+    width: 100%;
+    height: 38px;
+    justify-content: center;
+    gap: 25px;
+  }
+  .header-actions {
+    margin-left: auto;
+  }
+}

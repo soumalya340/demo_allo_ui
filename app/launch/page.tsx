@@ -14,6 +14,11 @@ import { useConnectModal, useChainModal } from "@rainbow-me/rainbowkit";
 import { walletChain } from "../lib/wallet-config";
 import { Icon } from "../components/shell";
 import {
+  validateImageFile,
+  uploadCoinImage,
+  MAX_IMAGE_PIXELS,
+} from "../lib/coin-image";
+import {
   launchParams,
   requestLaunch,
   type LaunchResponse,
@@ -55,6 +60,25 @@ export default function Launch() {
     [preview, setPreview] = useState(""),
     [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [checkingImage, setCheckingImage] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState<{
+    file: File;
+    url: string;
+  } | null>(null);
+  const previewUrl = useRef("");
+  const imageSelection = useRef(0);
+  const uploadController = useRef<AbortController | null>(null);
+  const imageInput = useRef<HTMLInputElement>(null);
+  useEffect(
+    () => () => {
+      imageSelection.current++;
+      uploadController.current?.abort();
+      if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
+    },
+    [],
+  );
   const [result, setResult] = useState<LaunchResponse | null>(null);
   const [apiError, setApiError] = useState("");
   const [health, setHealth] = useState<{ status: string; chainId?: number }>({
@@ -93,7 +117,7 @@ export default function Launch() {
   }, []);
   async function prepareLaunch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (inFlight.current) return;
+    if (inFlight.current || checkingImage) return;
     if (!isConnected || !address) {
       openConnectModal?.();
       return;
@@ -108,11 +132,29 @@ export default function Launch() {
     try {
       if (health.chainId && health.chainId !== walletChain.id)
         throw new Error("The launch service must use BSC testnet (chain 97).");
+      if (error) throw new Error(error);
       const formData = new FormData(event.currentTarget);
       formData.set("from", address);
       const query = launchParams(formData, buy, sell, alloc, token);
       inFlight.current = true;
       setBusy(true);
+      if (selectedImage) {
+        let imageUrl =
+          uploadedImage?.file === selectedImage ? uploadedImage.url : undefined;
+        if (!imageUrl) {
+          setUploadingImage(true);
+          const controller = new AbortController();
+          uploadController.current = controller;
+          imageUrl = await uploadCoinImage(selectedImage, controller.signal);
+          setUploadedImage({ file: selectedImage, url: imageUrl });
+          setUploadingImage(false);
+        }
+        if (revision.current !== currentRevision)
+          throw new Error(
+            "Your form or wallet changed. Review it and prepare the launch again.",
+          );
+        query.set("imageUrl", imageUrl);
+      }
       const response = await requestLaunch(query);
       if (response.chainId !== walletChain.id)
         throw new Error(
@@ -128,6 +170,8 @@ export default function Launch() {
     } finally {
       inFlight.current = false;
       setBusy(false);
+      setUploadingImage(false);
+      uploadController.current = null;
     }
   }
   function downloadTransaction() {
@@ -143,25 +187,46 @@ export default function Launch() {
   }
   const total = alloc.reduce((a, b) => a + b, 0);
   const colors = ["#f4c126", "#ee7570", "#49b58b", "#d5d9df"];
-  function upload(file?: File) {
-    if (!file) return;
-    if (
-      ![
-        "image/png",
-        "image/jpeg",
-        "image/webp",
-        "image/svg+xml",
-        "image/gif",
-      ].includes(file.type) ||
-      file.size > 3 * 1024 * 1024
-    ) {
-      setError("Choose a PNG, JPEG, WebP, SVG, or GIF under 3 MB.");
-      return;
-    }
+  function clearImage() {
+    imageSelection.current++;
+    if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
+    previewUrl.current = "";
+    if (imageInput.current) imageInput.current.value = "";
+    setSelectedImage(null);
+    setPreview("");
+    setUploadedImage(null);
     setError("");
-    const reader = new FileReader();
-    reader.onload = () => setPreview(String(reader.result));
-    reader.readAsDataURL(file);
+    setCheckingImage(false);
+    revision.current++;
+    setResult(null);
+    setApiError("");
+  }
+  async function selectImage(file?: File) {
+    if (!file || inFlight.current) return;
+    clearImage();
+    const selection = imageSelection.current;
+    setCheckingImage(true);
+    try {
+      validateImageFile(file);
+      const bitmap = await createImageBitmap(file);
+      const tooLarge = bitmap.width * bitmap.height > MAX_IMAGE_PIXELS;
+      bitmap.close();
+      if (tooLarge) throw new Error("Choose an image up to 16 megapixels.");
+      if (selection !== imageSelection.current) return;
+      const url = URL.createObjectURL(file);
+      previewUrl.current = url;
+      setSelectedImage(file);
+      setPreview(url);
+    } catch (error) {
+      if (selection === imageSelection.current)
+        setError(
+          error instanceof Error
+            ? error.message
+            : "This file could not be decoded as an image.",
+        );
+    } finally {
+      if (selection === imageSelection.current) setCheckingImage(false);
+    }
   }
   const gradient = alloc
     .map((v, i) => {
@@ -217,7 +282,7 @@ export default function Launch() {
           </div>
           <span className="muted">Unsigned transaction</span>
         </div>
-        <div className="form-body">
+        <fieldset className="form-body launch-fields" disabled={busy}>
           <Section title="BASIC INFORMATION">
             <div className="basic-grid">
               <div>
@@ -226,19 +291,20 @@ export default function Launch() {
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault();
-                    upload(e.dataTransfer.files[0]);
+                    void selectImage(e.dataTransfer.files[0]);
                   }}
                 >
                   <input
                     type="file"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
+                    ref={imageInput}
+                    accept="image/png,image/jpeg,image/webp"
                     aria-label="Upload coin image"
-                    onChange={(e) => upload(e.target.files?.[0])}
+                    onChange={(e) => void selectImage(e.target.files?.[0])}
                   />
                   {preview ? (
                     <Image
                       src={preview}
-                      alt="Uploaded coin artwork"
+                      alt="Coin image preview"
                       width={174}
                       height={174}
                       unoptimized
@@ -253,11 +319,29 @@ export default function Launch() {
                 </label>
                 <span className="supported">{"// SUPPORTED FORMATS"}</span>
                 <p className="upload-hint">
-                  PNG, JPEG, WebP, SVG, GIF
+                  PNG, JPEG, WebP
                   <br />
-                  Max. file size 3 MB. Local preview only; provide a hosted
-                  image URL below.
+                  Max. file size 3 MB. Preview stays on this page and clears on
+                  reload. Uploaded only when you prepare the launch.
                 </p>
+                {checkingImage && (
+                  <p className="upload-hint" role="status">
+                    Checking image…
+                  </p>
+                )}
+                {selectedImage && (
+                  <div className="image-selection">
+                    <span>{selectedImage.name}</span>
+                    <button type="button" onClick={clearImage}>
+                      Remove image
+                    </button>
+                  </div>
+                )}
+                {uploadedImage?.file === selectedImage && uploadedImage && (
+                  <p className="image-uploaded" role="status">
+                    ✓ Image uploaded
+                  </p>
+                )}
                 {error && (
                   <p className="negative" role="alert">
                     {error}
@@ -323,15 +407,6 @@ export default function Launch() {
           <Section title="LAUNCH PARAMETERS">
             <div className="fields-grid">
               <label>
-                Total supply <em>*</em>
-                <input
-                  name="totalSupply"
-                  required
-                  inputMode="decimal"
-                  placeholder="1000000"
-                />
-              </label>
-              <label>
                 Graduation threshold (BNB) <em>*</em>
                 <input
                   name="graduationThreshold"
@@ -340,28 +415,10 @@ export default function Launch() {
                   placeholder="10"
                 />
               </label>
-              <label className="full-width">
-                Image URL
-                <input
-                  name="imageUrl"
-                  type="url"
-                  placeholder="https://your-site.com/coin.png"
-                />
-              </label>
-              <label className="full-width">
-                Connected wallet address
-                <input
-                  name="from"
-                  readOnly
-                  value={address || ""}
-                  placeholder="Connect your wallet to continue"
-                />
-              </label>
             </div>
             <p className="field-help">
-              Amounts use whole coins and quote-token units. Providing a sender
-              lets the service check balances and simulate when approvals are
-              already in place.
+              Total supply is fixed at 1 billion coins. The graduation threshold
+              is in BNB. Your connected wallet is used automatically.
             </p>
           </Section>
           <Section title="SOCIAL LINKS" optional open={false}>
@@ -640,7 +697,7 @@ export default function Launch() {
             Community-created coins are independent of the companies they shadow
             and do not represent equity.
           </p>
-        </div>
+        </fieldset>
         <div className="launch-action">
           <div>
             <span>LAUNCH FEE</span>
@@ -670,8 +727,19 @@ export default function Launch() {
               SWITCH TO BSC TESTNET
             </button>
           ) : (
-            <button type="submit" disabled={busy} className="primary-button">
-              {busy ? "PREPARING…" : "PREPARE LAUNCH"} <Icon name="arrow" />
+            <button
+              type="submit"
+              disabled={busy || checkingImage}
+              className="primary-button"
+            >
+              {uploadingImage
+                ? "UPLOADING IMAGE…"
+                : busy
+                  ? "PREPARING…"
+                  : checkingImage
+                    ? "CHECKING IMAGE…"
+                    : "PREPARE LAUNCH"}{" "}
+              <Icon name="arrow" />
             </button>
           )}
         </div>

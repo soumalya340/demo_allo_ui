@@ -17,11 +17,11 @@ Open http://localhost:3100/launch.
 
 - `GET /api/health` proxies the backend's `GET /health`.
 - `GET /api/launch` proxies `GET /launch` with only documented arguments, no caching, and a 30-second timeout.
-- Supply, graduation threshold, and first purchase stay decimal strings. Tax and allocation percentages become basis points.
+- Total supply is fixed at 1 billion coins; no supply input is needed. Supply, graduation threshold, and first purchase stay decimal strings. Tax and allocation percentages become basis points.
 - Launch uses native BNB only. The frontend supports only BSC testnet (chain 97); configure the backend to match.
 - The RainbowKit-connected wallet supplies the sender address for balance/allowance checks and simulation. Launch preparation requires BSC testnet (97), and responses for other chains are rejected.
 - Returned quotes, approvals, simulation status, and unsigned transaction details are displayed and downloadable. No signing or broadcasting happens in this UI; wallet transaction signing/submission is not implemented.
-- Uploaded artwork is a local preview. Supply a hosted image URL for onchain metadata; the backend has no upload endpoint.
+- Coin artwork stays in memory as a local preview until Prepare Launch is submitted. The server validates and uploads it to Vercel Blob, then passes only the returned public URL to the launch API. Image URL and sender-address fields are not shown.
 - Reservation, company/IPO metadata, Telegram, vaults, and protection duration have no corresponding launch arguments and are disabled or omitted. Allocation number four is holder rewards, not liquidity.
 - Admin endpoints and trading endpoints are outside the Launch form's scope.
 
@@ -62,3 +62,11 @@ Newest launches appear first. Search supports name, symbol, contract, and creato
 ```sh
 node --experimental-strip-types --test tests/board-api.test.mjs
 ```
+
+## Coin image upload
+
+Connect a **public** Vercel Blob store to the project and configure the server-only `BLOB_READ_WRITE_TOKEN` (in `.env.local` for local development). The installed `@vercel/blob` SDK reads this token; never expose it with a `NEXT_PUBLIC_` prefix.
+
+`POST /api/coin-image/upload?filename=...` receives the file body only after Prepare Launch is submitted. The route enforces 3 MB, validates the MIME type and fully decodes PNG/JPEG/WebP images with Sharp, limits images to 16 megapixels, rejects animation, and re-encodes before uploading with a random filename suffix. Missing storage configuration and upload failures stop launch preparation.
+
+Selection and drag-and-drop create a browser object URL only. The image and preview disappear on reload or removal. Successful upload URLs are reused on retries during the current page session, so a backend failure does not cause another upload of the same selected file. Images already uploaded on submission remain in Blob storage; reloading only clears the local draft. No separate image URL or wallet address entry is required.

@@ -1,3 +1,4 @@
+export const TOTAL_SUPPLY = "1000000000";
 export type LaunchResponse = {
   chainId: number;
   approvals: Record<string, string>[];
@@ -37,10 +38,10 @@ export function launchParams(
     throw new Error(
       "Enter a coin name and a ticker of 1–10 letters or numbers.",
     );
-  for (const key of ["totalSupply", "graduationThreshold"]) {
+  for (const key of ["graduationThreshold"]) {
     if (!/^\d+(\.\d{1,18})?$/.test(text(key)) || !/[1-9]/.test(text(key)))
       throw new Error(
-        `${key === "totalSupply" ? "Total supply" : "Graduation threshold"} must be a positive decimal with at most 18 decimal places.`,
+        "Graduation threshold must be a positive decimal with at most 18 decimal places.",
       );
   }
   const query = new URLSearchParams({
@@ -48,7 +49,7 @@ export function launchParams(
     symbol: text("ticker").toUpperCase(),
     buyFeeBps: String(buy * 100),
     sellFeeBps: String(sell * 100),
-    totalSupply: text("totalSupply"),
+    totalSupply: TOTAL_SUPPLY,
     graduationThreshold: text("graduationThreshold"),
     quoteToken: token === "BNB" ? "native" : text("quoteToken"),
   });
