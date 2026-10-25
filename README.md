@@ -4,7 +4,7 @@ White-themed Board and Launch pages. Board lists launched coins from the backend
 
 ## Run
 
-Start the backend separately on port 3000. For a different backend, copy `.env.example` to `.env.local` and set `ALLO_API_URL` to its base URL. This variable is server-only.
+The UI defaults to the deployed backend at `http://62.72.58.104:3018`, matching the allo_xyz reference client. Set the server-only `ALLO_API_URL` to override it (for example, `http://127.0.0.1:3000` when running the backend locally). The same setting can be supplied in Vercel environment variables.
 
 ```sh
 npm install
@@ -17,10 +17,10 @@ Open http://localhost:3100/launch.
 
 - `GET /api/health` proxies the backend's `GET /health`.
 - `GET /api/launch` proxies `GET /launch` with only documented arguments, no caching, and a 30-second timeout.
-- Total supply is fixed at 1 billion coins; no supply input is needed. Supply, graduation threshold, and first purchase stay decimal strings. Tax and allocation percentages become basis points.
+- Total supply is editable and defaults to 1 billion coins. The graduation threshold hint uses the factory’s live on-chain start price and 80% curve allocation. Supply, graduation threshold, and first purchase stay decimal strings. Tax and allocation percentages become basis points.
 - Launch uses native BNB only. The frontend supports only BSC testnet (chain 97); configure the backend to match.
 - The RainbowKit-connected wallet supplies the sender address for balance/allowance checks and simulation. Launch preparation requires BSC testnet (97), and responses for other chains are rejected.
-- Returned quotes, approvals, simulation status, and unsigned transaction details are displayed and downloadable. No signing or broadcasting happens in this UI; wallet transaction signing/submission is not implemented.
+- Prepared quotes can be signed and submitted with the connected wallet using Sign & Launch. Native BNB transactions are restricted to chain 97 and the configured factory. The UI tracks confirmations and links to BscScan.
 - Coin artwork stays in memory as a local preview until Prepare Launch is submitted. The server validates and uploads it to Vercel Blob, then passes only the returned public URL to the launch API. Image URL and sender-address fields are not shown.
 - Reservation, company/IPO metadata, Telegram, vaults, and protection duration have no corresponding launch arguments and are disabled or omitted. Allocation number four is holder rewards, not liquidity.
 - Admin endpoints and trading endpoints are outside the Launch form's scope.
@@ -39,7 +39,7 @@ RainbowKit, wagmi 2, viem 2, and TanStack Query provide browser wallet discovery
 
 Browser extension wallets work without additional configuration. Set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` in `.env.local` to your Reown project ID to enable WalletConnect QR/mobile wallets, then restart the dev server (or rebuild for production). There is no placeholder project ID. Optionally set `NEXT_PUBLIC_BSC_TESTNET_RPC_URL` to a chain-97 RPC.
 
-Connecting a wallet does not sign or submit a transaction. Prepared transactions remain downloadable for separate signing.
+Connecting a wallet does not sign or submit a transaction. After preparing and reviewing a quote, Sign & Launch requests wallet confirmation and submits the transaction.
 
 ## Documentation pages
 

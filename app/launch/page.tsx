@@ -8,8 +8,9 @@ import {
 } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useAccount, useConfig } from "wagmi";
-import { watchAccount } from "wagmi/actions";
+import { useAccount, useConfig, useReadContract } from "wagmi";
+import { isAddress, zeroAddress, BaseError, type Hex } from "viem";
+import { watchAccount, getAccount, sendTransaction, getPublicClient } from "wagmi/actions";
 import { useConnectModal, useChainModal } from "@rainbow-me/rainbowkit";
 import { walletChain } from "../lib/wallet-config";
 import { Icon } from "../components/shell";
@@ -19,10 +20,14 @@ import {
   MAX_IMAGE_PIXELS,
 } from "../lib/coin-image";
 import {
+  DEFAULT_TOTAL_SUPPLY,
+  minimumGraduationThreshold,
   launchParams,
   requestLaunch,
   type LaunchResponse,
 } from "../lib/launch-api";
+import { walletLaunchTransaction } from "../lib/launch-transaction";
+
 function Section({
   title,
   optional,
@@ -59,6 +64,11 @@ export default function Launch() {
     [alloc, setAlloc] = useState([40, 20, 20, 20]),
     [preview, setPreview] = useState(""),
     [error, setError] = useState("");
+  const [totalSupply, setTotalSupply] = useState(DEFAULT_TOTAL_SUPPLY);
+  const [txHash, setTxHash] = useState<Hex>();
+  const [txPhase, setTxPhase] = useState<"idle" | "signing" | "pending" | "confirmed" | "reverted" | "unknown" | "cancelled">("idle");
+  const submissionLock = useRef(false);
+  const transactionActive = ["signing", "pending", "unknown"].includes(txPhase);
   const [busy, setBusy] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [checkingImage, setCheckingImage] = useState(false);
@@ -81,9 +91,21 @@ export default function Launch() {
   );
   const [result, setResult] = useState<LaunchResponse | null>(null);
   const [apiError, setApiError] = useState("");
-  const [health, setHealth] = useState<{ status: string; chainId?: number }>({
+  const [health, setHealth] = useState<{ status: string; chainId?: number; factory?: string }>({
     status: "checking",
   });
+  const factoryAddress = health.chainId === walletChain.id && health.factory && isAddress(health.factory)
+    ? health.factory : undefined;
+  const { data: startPrice, isError: priceError } = useReadContract({
+    address: factoryAddress,
+    abi: [{ type: "function", name: "startPriceOf", stateMutability: "view", inputs: [{ name: "token", type: "address" }], outputs: [{ type: "uint256" }] }] as const,
+    functionName: "startPriceOf",
+    args: [zeroAddress],
+    chainId: walletChain.id,
+    query: { enabled: Boolean(factoryAddress), refetchInterval: 15000 },
+  });
+  const minimumThreshold = startPrice !== undefined && startPrice > BigInt(0)
+    ? minimumGraduationThreshold(totalSupply, startPrice) : null;
   const inFlight = useRef(false);
   const revision = useRef(0);
   useEffect(
@@ -108,7 +130,7 @@ export default function Launch() {
     fetch("/api/health", { signal: controller.signal, cache: "no-store" })
       .then((r) => r.json())
       .then((data) =>
-        setHealth({ status: data.status || "down", chainId: data.chainId }),
+        setHealth({ status: data.status || "down", chainId: data.chainId, factory: data.factory }),
       )
       .catch(() => {
         if (!controller.signal.aborted) setHealth({ status: "down" });
@@ -117,7 +139,7 @@ export default function Launch() {
   }, []);
   async function prepareLaunch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (inFlight.current || checkingImage) return;
+    if (inFlight.current || checkingImage || submissionLock.current || transactionActive) return;
     if (!isConnected || !address) {
       openConnectModal?.();
       return;
@@ -128,6 +150,8 @@ export default function Launch() {
     }
     setApiError("");
     setResult(null);
+    setTxHash(undefined);
+    setTxPhase("idle");
     const currentRevision = revision.current;
     try {
       if (health.chainId && health.chainId !== walletChain.id)
@@ -174,16 +198,44 @@ export default function Launch() {
       uploadController.current = null;
     }
   }
-  function downloadTransaction() {
-    if (!result) return;
-    const url = URL.createObjectURL(
-      new Blob([JSON.stringify(result, null, 2)], { type: "application/json" }),
-    );
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "allo-launch-transaction.json";
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  async function confirmLaunch(hash: Hex) {
+    setTxPhase("pending");
+    try {
+      const client = getPublicClient(config, { chainId: walletChain.id });
+      if (!client) throw new Error("BSC testnet connection unavailable.");
+      let cancelled = false;
+      const receipt = await client.waitForTransactionReceipt({
+        hash,
+        timeout: 180000,
+        onReplaced: ({ reason, transactionReceipt }) => {
+          cancelled = reason !== "repriced";
+          setTxHash(transactionReceipt.transactionHash);
+        },
+      });
+      setTxPhase(cancelled ? "cancelled" : receipt.status === "success" ? "confirmed" : "reverted");
+    } catch {
+      setTxPhase("unknown");
+    }
+  }
+  async function signLaunch() {
+    if (!result || submissionLock.current || txHash) return;
+    const account = getAccount(config);
+    if (!account.address) { openConnectModal?.(); return; }
+    if (account.chainId !== walletChain.id) { openChainModal?.(); return; }
+    submissionLock.current = true;
+    setApiError("");
+    try {
+      const transaction = walletLaunchTransaction(result, account.address, account.chainId, factoryAddress);
+      setTxPhase("signing");
+      const hash = await sendTransaction(config, transaction);
+      setTxHash(hash);
+      await confirmLaunch(hash);
+    } catch (error) {
+      setTxPhase("idle");
+      setApiError(error instanceof BaseError ? error.shortMessage : error instanceof Error ? error.message : "Could not submit the launch. Please try again.");
+    } finally {
+      submissionLock.current = false;
+    }
   }
   const total = alloc.reduce((a, b) => a + b, 0);
   const colors = ["#f4c126", "#ee7570", "#49b58b", "#d5d9df"];
@@ -260,7 +312,7 @@ export default function Launch() {
           setApiError("");
         }}
         onClick={(event) => {
-          if ((event.target as HTMLElement).closest('button[type="button"]')) {
+          if ((event.target as HTMLElement).closest('button[type="button"]:not([data-launch-action])')) {
             revision.current++;
             setResult(null);
           }
@@ -282,7 +334,7 @@ export default function Launch() {
           </div>
           <span className="muted">Unsigned transaction</span>
         </div>
-        <fieldset className="form-body launch-fields" disabled={busy}>
+        <fieldset className="form-body launch-fields" disabled={busy || transactionActive || txPhase === "confirmed"}>
           <Section title="BASIC INFORMATION">
             <div className="basic-grid">
               <div>
@@ -407,18 +459,35 @@ export default function Launch() {
           <Section title="LAUNCH PARAMETERS">
             <div className="fields-grid">
               <label>
+                Total supply <em>*</em>
+                <input name="totalSupply" required inputMode="decimal" value={totalSupply} aria-describedby="supply-limit"
+                  onChange={(event) => setTotalSupply(event.target.value)} />
+                <span id="supply-limit" className="field-help">Maximum supply: 1 billion coins.</span>
+              </label>
+              <label>
                 Graduation threshold (BNB) <em>*</em>
                 <input
                   name="graduationThreshold"
                   required
                   inputMode="decimal"
-                  placeholder="10"
+                  placeholder="Enter BNB amount"
+                  aria-describedby="graduation-minimum"
                 />
+                <span id="graduation-minimum" className="field-help" aria-live="polite">
+                  {minimumThreshold !== null
+                    ? `Minimum to raise: more than ${minimumThreshold.replace(/^(\d+)/, (whole) => whole.replace(/\B(?=(\d{3})+(?!\d))/g, ","))} BNB. Based on 80% of your supply and the current on-chain start price.`
+                    : priceError || (health.status !== "checking" && !factoryAddress)
+                      ? "Minimum unavailable. The launch service will validate your threshold."
+                      : startPrice === BigInt(0)
+                        ? "BNB launches are currently disabled by the factory."
+                        : startPrice !== undefined
+                          ? "Enter a valid total supply to see the minimum amount to raise."
+                          : "Loading the on-chain minimum…"}
+                </span>
               </label>
             </div>
             <p className="field-help">
-              Total supply is fixed at 1 billion coins. The graduation threshold
-              is in BNB. Your connected wallet is used automatically.
+              Your connected wallet is used automatically.
             </p>
           </Section>
           <Section title="SOCIAL LINKS" optional open={false}>
@@ -628,10 +697,9 @@ export default function Launch() {
               aria-label="Launch review"
               role="status"
             >
-              <h2>Launch transaction ready</h2>
+              <h2>{txHash ? "Launch transaction submitted" : "Launch transaction ready"}</h2>
               <p>
-                Review this quote before signing. Your coin has not been
-                launched.
+                {txHash ? "Track your transaction confirmation below." : "Review this quote, then confirm the launch in your connected wallet."}
               </p>
               <dl>
                 <div>
@@ -673,20 +741,15 @@ export default function Launch() {
                   <dd>{result.simulated ? "Passed" : "Not simulated"}</dd>
                 </div>
               </dl>
-              <p>
-                Send any approvals in order, wait for confirmation, then sign
-                the launch transaction on chain {result.chainId}.
-              </p>
-              <a
+              <button
+                type="button"
+                data-launch-action
                 className="primary-button"
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  downloadTransaction();
-                }}
+                disabled={busy || transactionActive || Boolean(txHash)}
+                onClick={() => void signLaunch()}
               >
-                DOWNLOAD TRANSACTION
-              </a>
+                {txPhase === "signing" ? "CONFIRM IN WALLET…" : txHash ? "TRANSACTION SENT" : "SIGN & LAUNCH"}
+              </button>
               <details>
                 <summary>Transaction details</summary>
                 <pre>{JSON.stringify(result, null, 2)}</pre>
@@ -698,6 +761,15 @@ export default function Launch() {
             and do not represent equity.
           </p>
         </fieldset>
+        {(txHash || txPhase === "signing") && (
+          <section className="launch-review" role="status" aria-live="polite">
+            <h2>{txPhase === "confirmed" ? "Coin launched successfully" : "Launch status"}</h2>
+            <p>{txPhase === "signing" ? "Confirm the transaction in your wallet." : txPhase === "pending" ? "Transaction submitted. Waiting for confirmation…" : txPhase === "confirmed" ? "Confirmed on BSC testnet. Your coin will appear on the Board after the indexer updates." : txPhase === "reverted" ? "The transaction reverted. Your coin was not launched. Prepare a new launch to try again." : txPhase === "cancelled" ? "The launch transaction was cancelled or replaced in your wallet. Check the transaction before preparing again." : "The transaction was submitted, but confirmation could not be checked. Check its status before trying another launch."}</p>
+            {txHash && <a href={`https://testnet.bscscan.com/tx/${txHash}`} target="_blank" rel="noopener noreferrer">View transaction on BscScan ↗</a>}
+            {txPhase === "unknown" && txHash && <button type="button" data-launch-action className="primary-button" onClick={() => void confirmLaunch(txHash)}>CHECK CONFIRMATION</button>}
+            {txPhase === "confirmed" && <p><Link href="/">View Board →</Link></p>}
+          </section>
+        )}
         <div className="launch-action">
           <div>
             <span>LAUNCH FEE</span>
@@ -729,7 +801,7 @@ export default function Launch() {
           ) : (
             <button
               type="submit"
-              disabled={busy || checkingImage}
+              disabled={busy || checkingImage || transactionActive || txPhase === "confirmed"}
               className="primary-button"
             >
               {uploadingImage

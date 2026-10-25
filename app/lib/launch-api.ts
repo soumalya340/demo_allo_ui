@@ -1,4 +1,13 @@
-export const TOTAL_SUPPLY = "1000000000";
+import { parseUnits, formatUnits } from "viem";
+
+export const MAX_TOTAL_SUPPLY = "1000000000";
+export const DEFAULT_TOTAL_SUPPLY = MAX_TOTAL_SUPPLY;
+export function minimumGraduationThreshold(supply: string, startPrice: bigint) {
+  if (!/^\d+(\.\d{1,18})?$/.test(supply) || !/[1-9]/.test(supply)) return null;
+  const curveSupply = (parseUnits(supply, 18) * BigInt(8000)) / BigInt(10000);
+  if (curveSupply === BigInt(0)) return null;
+  return formatUnits((startPrice * curveSupply) / BigInt(10) ** BigInt(18), 18);
+}
 export type LaunchResponse = {
   chainId: number;
   approvals: Record<string, string>[];
@@ -38,18 +47,20 @@ export function launchParams(
     throw new Error(
       "Enter a coin name and a ticker of 1–10 letters or numbers.",
     );
-  for (const key of ["graduationThreshold"]) {
+  for (const key of ["totalSupply", "graduationThreshold"]) {
     if (!/^\d+(\.\d{1,18})?$/.test(text(key)) || !/[1-9]/.test(text(key)))
       throw new Error(
-        "Graduation threshold must be a positive decimal with at most 18 decimal places.",
+        `${key === "totalSupply" ? "Total supply" : "Graduation threshold"} must be a positive decimal with at most 18 decimal places.`,
       );
   }
+  if (parseUnits(text("totalSupply"), 18) > parseUnits(MAX_TOTAL_SUPPLY, 18))
+    throw new Error("Total supply cannot exceed 1 billion coins.");
   const query = new URLSearchParams({
     name: text("coinName"),
     symbol: text("ticker").toUpperCase(),
     buyFeeBps: String(buy * 100),
     sellFeeBps: String(sell * 100),
-    totalSupply: TOTAL_SUPPLY,
+    totalSupply: text("totalSupply"),
     graduationThreshold: text("graduationThreshold"),
     quoteToken: token === "BNB" ? "native" : text("quoteToken"),
   });

@@ -14,11 +14,12 @@ export async function POST(request: Request) {
     );
   try {
     const image = await validateImageRequest(request);
-    if (!process.env.BLOB_READ_WRITE_TOKEN)
+    const token = process.env.BLOB_ALLO_READ_WRITE_TOKEN?.trim() || process.env.BLOB_READ_WRITE_TOKEN?.trim();
+    if (!token)
       return NextResponse.json(
         {
           error:
-            "Image storage is not configured. Connect a public Vercel Blob store and set BLOB_READ_WRITE_TOKEN.",
+            "Image storage is not configured. Connect a public Vercel Blob store and set BLOB_ALLO_READ_WRITE_TOKEN or BLOB_READ_WRITE_TOKEN.",
         },
         { status: 503 },
       );
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     const blob = await put(
       `coin-images/${stem}.${image.extension}`,
       image.data,
-      { access: "public", addRandomSuffix: true, contentType: image.type },
+      { access: "public", addRandomSuffix: true, contentType: image.type, token },
     );
     return NextResponse.json(
       { url: blob.url, pathname: blob.pathname, contentType: blob.contentType },

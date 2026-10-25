@@ -1,11 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { launchParams, requestLaunch } from "../app/lib/launch-api.ts";
+import { launchParams, requestLaunch, minimumGraduationThreshold } from "../app/lib/launch-api.ts";
 const form = () => {
   const f = new FormData();
   for (const [k, v] of Object.entries({
     coinName: "Example & Coin",
     ticker: "test",
+    totalSupply: "1000000000",
     graduationThreshold: "10.123456789012345678",
     purchase: "0",
     description: "A coin + a company",
@@ -79,15 +80,29 @@ test("surfaces backend errors and rejects malformed success responses", async ()
   }
 });
 
-test("always sends one billion coins without asking for supply", () => {
+test("sends the supplied total supply and rejects invalid amounts", () => {
   const f = form();
-  assert.equal(
-    launchParams(f, 1, 1, [40, 20, 20, 20], "BNB").get("totalSupply"),
-    "1000000000",
-  );
-  f.set("totalSupply", "123");
-  assert.equal(
-    launchParams(f, 1, 1, [40, 20, 20, 20], "BNB").get("totalSupply"),
-    "1000000000",
-  );
+  f.set("totalSupply", "123.456");
+  assert.equal(launchParams(f, 1, 1, [40, 20, 20, 20], "BNB").get("totalSupply"), "123.456");
+  for (const invalid of ["", "0", "-1", "1e9", "1.0000000000000000001"]) {
+    f.set("totalSupply", invalid);
+    assert.throws(() => launchParams(f, 1, 1, [40, 20, 20, 20], "BNB"), /Total supply/);
+  }
+});
+test("minimum follows on-chain price and curve allocation with exact precision", () => {
+  assert.equal(minimumGraduationThreshold("1000000000", 10000000000000n), "8000");
+  assert.equal(minimumGraduationThreshold("1000000", 10000000000000n), "8");
+  assert.equal(minimumGraduationThreshold("1000000", 20000000000000n), "16");
+  assert.equal(minimumGraduationThreshold("1.123456789012345678", 1000000000000000000n), "0.898765431209876542");
+  assert.equal(minimumGraduationThreshold("", 1n), null);
+  assert.equal(minimumGraduationThreshold("0", 1n), null);
+});
+
+test("allows the one billion cap and rejects even one smallest unit above it", () => {
+  const f = form();
+  assert.equal(launchParams(f, 1, 1, [40, 20, 20, 20], "BNB").get("totalSupply"), "1000000000");
+  for (const supply of ["1000000001", "1000000000.000000000000000001"]) {
+    f.set("totalSupply", supply);
+    assert.throws(() => launchParams(f, 1, 1, [40, 20, 20, 20], "BNB"), /cannot exceed 1 billion/);
+  }
 });

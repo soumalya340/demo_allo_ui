@@ -3,7 +3,7 @@ export async function proxyBackend(
   endpoint: "health" | "launch" | "get-all-pool-info",
   request: Request,
 ) {
-  const base = process.env.ALLO_API_URL || "http://127.0.0.1:3000";
+  const base = process.env.ALLO_API_URL || "http://62.72.58.104:3018";
   try {
     const target = new URL(`${base.replace(/\/$/, "")}/${endpoint}`);
     if (endpoint === "launch") {
@@ -40,13 +40,13 @@ export async function proxyBackend(
       status: response.status,
       headers: { "Cache-Control": "no-store" },
     });
-  } catch {
+  } catch (error) {
     return Response.json(
       {
         message:
-          endpoint === "get-all-pool-info"
-            ? "The coin service is unavailable. Please try again shortly."
-            : "The launch service is unavailable. Please try again shortly.",
+          error instanceof Error && error.name === "TimeoutError"
+            ? "The backend request timed out. Please try again."
+            : "Cannot reach the configured Allo backend. Check ALLO_API_URL and the backend service.",
       },
       { status: 502, headers: { "Cache-Control": "no-store" } },
     );
