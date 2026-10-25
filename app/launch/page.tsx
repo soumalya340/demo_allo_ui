@@ -41,19 +41,13 @@ function Section({
     </details>
   );
 }
-const tokenList = [
-  { symbol: "BNB", name: "Native BNB", kind: "Featured" },
-  { symbol: "ERC20", name: "Approved ERC20 token", kind: "Featured" },
-];
+const token = "BNB";
 export default function Launch() {
   const { address, chainId, isConnected } = useAccount();
   const config = useConfig();
   const { openConnectModal } = useConnectModal();
   const { openChainModal } = useChainModal();
   const [vault, setVault] = useState("No vault"),
-    [token, setToken] = useState("BNB"),
-    [tab, setTab] = useState("Featured"),
-    [search, setSearch] = useState(""),
     [protection, setProtection] = useState("Off"),
     [buy, setBuy] = useState(1),
     [sell, setSell] = useState(1),
@@ -338,8 +332,7 @@ export default function Launch() {
                 />
               </label>
               <label>
-                Graduation threshold ({token === "BNB" ? "BNB" : "quote token"}){" "}
-                <em>*</em>
+                Graduation threshold (BNB) <em>*</em>
                 <input
                   name="graduationThreshold"
                   required
@@ -435,79 +428,19 @@ export default function Launch() {
             </div>
           </Section>
           <Section title="PAYMENT TOKEN">
-            <div className="payment-toolbar">
-              <div className="token-tabs">
-                {["Featured", "All"].map((t) => (
-                  <button
-                    type="button"
-                    key={t}
-                    className={tab === t ? "selected" : ""}
-                    onClick={() => setTab(t)}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-              <label className="search">
-                <Icon name="search" size={16} />
-                <input
-                  placeholder="Search tokens"
-                  aria-label="Search payment tokens"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </label>
-            </div>
             <div className="token-options">
-              {tokenList
-                .filter(
-                  (t) =>
-                    (tab === "All" ||
-                      (tab === "Featured" && t.symbol !== "OPNAI") ||
-                      tab === t.kind) &&
-                    `${t.symbol} ${t.name}`
-                      .toLowerCase()
-                      .includes(search.toLowerCase()),
-                )
-                .map((t) => (
-                  <button
-                    type="button"
-                    className={token === t.symbol ? "selected" : ""}
-                    key={t.symbol}
-                    aria-pressed={token === t.symbol}
-                    onClick={() => setToken(t.symbol)}
-                  >
-                    <span className="token-symbol">
-                      {t.symbol === "ETH" ? "Ξ" : t.symbol[0]}
-                    </span>
-                    {t.symbol}
-                    {token === t.symbol && (
-                      <span className="token-check">✓</span>
-                    )}
-                  </button>
-                ))}
+              <button type="button" className="selected" aria-pressed="true">
+                <span className="token-symbol">B</span> BNB
+                <span className="token-check">✓</span>
+              </button>
             </div>
-            {token === "ERC20" && (
-              <label className="quote-address">
-                Approved quote token address <em>*</em>
-                <input
-                  name="quoteToken"
-                  required
-                  pattern="0x[a-fA-F0-9]{40}"
-                  placeholder="0x…"
-                />
-              </label>
-            )}
             <div className="eligibility">
               <strong>✓ &nbsp; {token} selected for payment</strong>
               <p>
                 Eligibility and a fresh quote will be checked before creation.
               </p>
               <span>
-                {token}{" "}
-                <span className="muted">
-                  · {tokenList.find((t) => t.symbol === token)?.name}
-                </span>
+                {token} <span className="muted">· Native BNB</span>
               </span>
             </div>
           </Section>

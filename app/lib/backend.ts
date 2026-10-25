@@ -1,6 +1,6 @@
 import "server-only";
 export async function proxyBackend(
-  endpoint: "health" | "launch",
+  endpoint: "health" | "launch" | "get-all-pool-info",
   request: Request,
 ) {
   const base = process.env.ALLO_API_URL || "http://127.0.0.1:3000";
@@ -43,7 +43,10 @@ export async function proxyBackend(
   } catch {
     return Response.json(
       {
-        message: "The launch service is unavailable. Please try again shortly.",
+        message:
+          endpoint === "get-all-pool-info"
+            ? "The coin service is unavailable. Please try again shortly."
+            : "The launch service is unavailable. Please try again shortly.",
       },
       { status: 502, headers: { "Cache-Control": "no-store" } },
     );

@@ -2035,3 +2035,154 @@ input[type="range"] {
     font-size: 12px;
   }
 }
+
+.board-refresh {
+  padding: 10px;
+  border: 1px solid var(--line);
+  font: 9px var(--mono);
+  color: #85815e;
+  white-space: nowrap;
+}
+.board-refresh:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.board-error {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid #e8bbad;
+  background: #fff7f0;
+  margin: 20px 0;
+  color: #88523d;
+  font-size: 12px;
+}
+.board-error p {
+  margin-top: 8px;
+  line-height: 1.7;
+}
+.board-error button {
+  white-space: nowrap;
+  color: #8c6823;
+}
+.board-loading {
+  border: 1px solid var(--line);
+  padding: 20px;
+  font: 11px var(--mono);
+  color: #8a917e;
+}
+.coin-skeleton {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+}
+.coin-skeleton i {
+  width: 38px;
+  height: 38px;
+  background: #f0f3ea;
+  border-radius: 4px;
+}
+.coin-skeleton span {
+  width: 25%;
+  height: 12px;
+  background: #f0f3ea;
+}
+.coin-initials {
+  font: 600 13px var(--mono);
+  color: #71815b;
+}
+.coin-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+.quote-unit {
+  color: #8f9684;
+  font-size: 9px;
+}
+.coin-status {
+  font: 9px var(--mono);
+  padding: 5px 7px;
+  background: #f4f5ee;
+  color: #7f886e;
+}
+.coin-status.graduated {
+  background: #fffae4;
+  color: #947315;
+}
+.coin-status.migrated {
+  background: #edf8ee;
+  color: #3f8a54;
+}
+.pool-link {
+  color: #96802c;
+  font: 10px var(--mono);
+}
+.pool-link:hover {
+  text-decoration: underline;
+}
+.coin-card > .pool-link {
+  display: block;
+  margin-top: 18px;
+}
+.launched-card-price {
+  font-size: 19px;
+  justify-content: flex-start;
+  gap: 7px;
+}
+.launched-table td {
+  height: 78px;
+}
+.coin-dialog {
+  padding: 0;
+  border: 1px solid var(--line);
+  max-width: calc(100vw - 32px);
+  width: 460px;
+  max-height: 85dvh;
+  overflow: auto;
+  margin: auto;
+}
+.coin-dialog::backdrop {
+  background: #252c2555;
+  backdrop-filter: blur(3px);
+}
+.coin-dialog .coin-modal {
+  max-width: none;
+  border: 0;
+}
+.coin-dialog h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+.coin-dialog .card-price {
+  font-size: 21px;
+}
+.coin-detail-list {
+  font-size: 11px;
+  line-height: 1.7;
+}
+.coin-detail-list dt {
+  color: #8c957e;
+  margin-top: 15px;
+}
+.coin-detail-list dd {
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  margin-top: 4px;
+}
+.coin-detail-list a,
+.coin-detail-links a {
+  color: #967b20;
+}
+.coin-detail-links {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  font-size: 11px;
+}

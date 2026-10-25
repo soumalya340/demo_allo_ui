@@ -1,196 +1,31 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import Image from "next/image";
 import { Icon } from "./shell";
-const coins = [
-  {
-    ticker: "OPNAI",
-    name: "Open Sesame",
-    company: "OPENAI",
-    emoji: "🤖",
-    color: "gray",
-    value: "$500B",
-    price: 0.001594,
-    mcap: 1600000,
-    vol: 1980000,
-    holders: 6455,
-    liq: 123280,
-    changes: [21.84, 4.54, 168.3, 1683.33],
-    curve: 100,
-    category: "AI Labs",
-    verified: true,
-  },
-  {
-    ticker: "ANTHRO",
-    name: "Constitutional Cat",
-    company: "ANTHROPIC",
-    emoji: "🐈",
-    color: "peach",
-    value: "$183B",
-    price: 0.0002108,
-    mcap: 210830,
-    vol: 1790000,
-    holders: 1512,
-    liq: 74680,
-    changes: [2.12, -31.7, 158.57, 615.42],
-    curve: 82,
-    category: "AI Labs",
-    verified: true,
-  },
-  {
-    ticker: "STRIPE",
-    name: "Stripe Tease",
-    company: "STRIPE",
-    emoji: "🦓",
-    color: "lavender",
-    value: "$107B",
-    price: 0.007133,
-    mcap: 7140000,
-    vol: 1060000,
-    holders: 10024,
-    liq: 376230,
-    changes: [3.44, -0.23, 6.54, 29.08],
-    curve: 100,
-    category: "Fintech",
-    verified: false,
-  },
-  {
-    ticker: "BRICKS",
-    name: "Data Bricked",
-    company: "DATABRICKS",
-    emoji: "🧱",
-    color: "pink",
-    value: "$100B",
-    price: 0.00005336,
-    mcap: 53370,
-    vol: 829350,
-    holders: 167,
-    liq: 21270,
-    changes: [4.82, -32.22, -15.44, -15.44],
-    curve: 63,
-    category: "Deep Tech",
-    verified: false,
-  },
-  {
-    ticker: "REVOL",
-    name: "Revolut Rocket",
-    company: "REVOLUT",
-    emoji: "🐧",
-    color: "blue",
-    value: "$75B",
-    price: 0.002659,
-    mcap: 2660000,
-    vol: 646110,
-    holders: 7416,
-    liq: 274030,
-    changes: [1.46, -3.68, 3.44, -21.54],
-    curve: 100,
-    category: "Fintech",
-    verified: true,
-  },
-  {
-    ticker: "NEURL",
-    name: "Big Brain Chip",
-    company: "NEURALINK",
-    emoji: "🧠",
-    color: "pink",
-    value: "$9B",
-    price: 0.003646,
-    mcap: 3650000,
-    vol: 589830,
-    holders: 2814,
-    liq: 206360,
-    changes: [-2.36, -4.12, 8.15, 3.61],
-    curve: 100,
-    category: "Deep Tech",
-    verified: true,
-  },
-  {
-    ticker: "CANVA",
-    name: "Canva Cat",
-    company: "CANVA",
-    emoji: "🐱",
-    color: "mint",
-    value: "$42B",
-    price: 0.001531,
-    mcap: 316460,
-    vol: 561680,
-    holders: 3018,
-    liq: 121240,
-    changes: [-0.5, -5.32, -17.9, 1219.59],
-    curve: 94,
-    category: "Consumer",
-    verified: false,
-  },
-  {
-    ticker: "DISCO",
-    name: "Discord Kitten",
-    company: "DISCORD",
-    emoji: "👾",
-    color: "lavender",
-    value: "$15B",
-    price: 0.00004641,
-    mcap: 22790,
-    vol: 516100,
-    holders: 2893,
-    liq: 20790,
-    changes: [-3.22, 21.22, -75.14, -26.07],
-    curve: 28,
-    category: "Consumer",
-    verified: false,
-  },
-  {
-    ticker: "RAMP",
-    name: "Ramp It Up",
-    company: "RAMP",
-    emoji: "🦆",
-    color: "mint",
-    value: "$22B",
-    price: 0.000824,
-    mcap: 824000,
-    vol: 428720,
-    holders: 1842,
-    liq: 89150,
-    changes: [5.12, 8.64, 12.43, 42.18],
-    curve: 76,
-    category: "Fintech",
-    verified: false,
-  },
-  {
-    ticker: "SPACEX",
-    name: "To The Mars",
-    company: "SPACEX",
-    emoji: "🛸",
-    color: "blue",
-    value: "$400B",
-    price: 0.004782,
-    mcap: 4782000,
-    vol: 398460,
-    holders: 5296,
-    liq: 321800,
-    changes: [1.83, 2.56, 18.92, 68.41],
-    curve: 100,
-    category: "Deep Tech",
-    verified: true,
-  },
-];
-type Coin = (typeof coins)[number];
-const money = (v: number) =>
-  "$" +
-  (v >= 1e6
-    ? (v / 1e6).toFixed(2).replace(/0$/, "") + "M"
-    : (v / 1e3).toFixed(2) + "K");
+import {
+  fetchLaunchedCoins,
+  coinStatus,
+  formatAmount,
+  safeLink,
+  type LaunchedCoin,
+} from "../lib/board-api";
 const categories = [
-  "Trending",
-  "IPO Watch",
-  "AI Labs",
-  "Deep Tech",
-  "Fintech",
-  "Consumer",
+  "All launches",
   "Bonding",
   "Graduated",
+  "Migrated",
+  "Watchlist",
 ];
-function Curve({ value }: { value: number }) {
+const explorer = "https://testnet.bscscan.com";
+const shortAddress = (address: string) =>
+  `${address.slice(0, 6)}…${address.slice(-4)}`;
+function Curve({ coin }: { coin: LaunchedCoin }) {
+  const value =
+    coin.graduated || coin.migrated
+      ? 100
+      : Math.min(100, Math.max(0, coin.progressPercent));
   return (
     <span className="curve">
       <span className="curve-bars">
@@ -198,50 +33,209 @@ function Curve({ value }: { value: number }) {
           <i key={i} className={i < Math.round(value / 10) ? "filled" : ""} />
         ))}
       </span>
-      <span className={value === 100 ? "graduated" : ""}>
-        {value === 100 ? "GRAD" : value + "%"}
-      </span>
+      <span>{value.toFixed(1)}%</span>
     </span>
   );
 }
+function CoinAvatar({ coin }: { coin: LaunchedCoin }) {
+  const [failed, setFailed] = useState(false);
+  const src = safeLink(coin.imageUrl);
+  return (
+    <span className="coin-avatar mint">
+      {src && !failed ? (
+        <Image
+          src={src}
+          alt=""
+          width={39}
+          height={39}
+          unoptimized
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span className="coin-initials">
+          {coin.symbol.slice(0, 2).toUpperCase() || "?"}
+        </span>
+      )}
+    </span>
+  );
+}
+function CoinDetails({
+  coin,
+  onClose,
+}: {
+  coin: LaunchedCoin;
+  onClose: () => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    dialog.current?.showModal();
+  }, []);
+  return (
+    <dialog
+      ref={dialog}
+      className="coin-dialog"
+      onClose={onClose}
+      onClick={(event) => {
+        if (event.target === dialog.current) dialog.current?.close();
+      }}
+    >
+      <section className="coin-modal">
+        <button
+          className="modal-close"
+          onClick={() => dialog.current?.close()}
+          aria-label="Close coin details"
+        >
+          ×
+        </button>
+        <div className="coin-identity">
+          <CoinAvatar coin={coin} />
+          <div>
+            <h2>{coin.name}</h2>
+            <span className="coin-name">${coin.symbol}</span>
+          </div>
+        </div>
+        <p>{coin.description || "A coin launched on Allo."}</p>
+        <span className="company-tag">{coinStatus(coin)}</span>
+        <div className="card-price">
+          {coin.migrated
+            ? "On PancakeSwap"
+            : `${formatAmount(coin.currentPrice)} ${coin.quoteToken.symbol}`}
+        </div>
+        <div className="card-stats">
+          <span>
+            TOTAL SUPPLY<strong>{formatAmount(coin.totalSupply)}</strong>
+          </span>
+          <span>
+            CURVE RESERVE
+            <strong>
+              {formatAmount(coin.quoteReserve)} {coin.quoteToken.symbol}
+            </strong>
+          </span>
+        </div>
+        <Curve coin={coin} />
+        <dl className="coin-detail-list">
+          <dt>Contract</dt>
+          <dd>
+            <a
+              href={`${explorer}/address/${coin.pool}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {coin.pool} ↗
+            </a>
+          </dd>
+          <dt>Creator</dt>
+          <dd>
+            {/^0x[a-fA-F0-9]{40}$/.test(coin.creator) ? (
+              <a
+                href={`${explorer}/address/${coin.creator}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {shortAddress(coin.creator)} ↗
+              </a>
+            ) : (
+              "—"
+            )}
+          </dd>
+          <dt>Buy / sell tax</dt>
+          <dd>
+            {coin.buyFeeBps / 100}% / {coin.sellFeeBps / 100}%
+          </dd>
+          <dt>Graduation threshold</dt>
+          <dd>
+            {formatAmount(coin.graduationThreshold)} {coin.quoteToken.symbol}
+          </dd>
+        </dl>
+        <div className="coin-detail-links">
+          {safeLink(coin.website) && (
+            <a
+              href={safeLink(coin.website)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Website ↗
+            </a>
+          )}
+          {safeLink(coin.twitter) && (
+            <a
+              href={safeLink(coin.twitter)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              X / Twitter ↗
+            </a>
+          )}
+          {coin.launch?.txHash &&
+            /^0x[a-fA-F0-9]{64}$/.test(coin.launch.txHash) && (
+              <a
+                href={`${explorer}/tx/${coin.launch.txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Launch transaction ↗
+              </a>
+            )}
+          {coin.migrated && /^0x[a-fA-F0-9]{40}$/.test(coin.pair) && (
+            <a
+              href={`${explorer}/address/${coin.pair}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Liquidity pair ↗
+            </a>
+          )}
+        </div>
+        <p className="muted">
+          State from the Allo indexer. Prices and reserves are in the coin’s
+          quote token. Migrated coins no longer trade on the curve.
+        </p>
+      </section>
+    </dialog>
+  );
+}
 export default function Board() {
-  const [category, setCategory] = useState("Trending"),
+  const [category, setCategory] = useState("All launches"),
     [query, setQuery] = useState(""),
     [grid, setGrid] = useState(false),
-    [sort, setSort] = useState("vol"),
     [ascending, setAscending] = useState(false),
+    [sort, setSort] = useState("index"),
     [watched, setWatched] = useState<string[]>([]),
-    [selected, setSelected] = useState<Coin | null>(null);
+    [selectedAddress, setSelectedAddress] = useState<string | null>(null);
+  const { data, error, isPending, isFetching, refetch } = useQuery({
+    queryKey: ["launched-coins", 97],
+    queryFn: ({ signal }) => fetchLaunchedCoins(signal),
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
+    retry: 1,
+  });
+  const coins = data?.pools || [];
+  const selected = coins.find((coin) => coin.pool === selectedAddress);
   const filtered = coins
     .filter(
-      (c) =>
-        (category === "Trending" ||
-          (category === "IPO Watch" && c.verified) ||
-          (category === "Bonding" && c.curve < 100) ||
-          (category === "Graduated" && c.curve === 100) ||
-          category === c.category) &&
-        `${c.name} ${c.ticker} ${c.company}`
+      (coin) =>
+        (category === "All launches" ||
+          category === coinStatus(coin) ||
+          (category === "Watchlist" && watched.includes(coin.pool))) &&
+        `${coin.name} ${coin.symbol} ${coin.pool} ${coin.creator}`
           .toLowerCase()
-          .includes(query.toLowerCase()),
+          .includes(query.trim().toLowerCase()),
     )
     .sort((a, b) => {
-      const val = (c: Coin) =>
-        sort === "ticker"
-          ? c.ticker
-          : sort.startsWith("change")
-            ? c.changes[Number(sort.slice(-1))]
-            : c[sort as "price" | "vol" | "mcap" | "holders" | "liq" | "curve"];
-      const av = val(a),
-        bv = val(b);
+      const value = (c: LaunchedCoin) =>
+        sort === "symbol"
+          ? c.symbol
+          : sort === "progressPercent"
+            ? c.progressPercent
+            : c.index;
+      const av = value(a),
+        bv = value(b);
       return (
         (typeof av === "string"
           ? av.localeCompare(String(bv))
           : Number(av) - Number(bv)) * (ascending ? 1 : -1)
       );
     });
-  function toggleWatch(t: string) {
-    setWatched((w) => (w.includes(t) ? w.filter((v) => v !== t) : [...w, t]));
-  }
   function sortBy(key: string) {
     if (sort === key) setAscending(!ascending);
     else {
@@ -249,43 +243,60 @@ export default function Board() {
       setAscending(false);
     }
   }
-  function identity(c: Coin) {
+  function identity(coin: LaunchedCoin) {
     return (
       <div className="coin-identity">
-        <span className={`coin-avatar ${c.color}`}>{c.emoji}</span>
+        <CoinAvatar key={coin.imageUrl} coin={coin} />
         <div>
           <div className="coin-title">
-            <button onClick={() => setSelected(c)}>${c.ticker}</button>
-            {c.verified && (
-              <span className="verified" title="Verified coin">
-                ✿
-              </span>
-            )}
+            <button onClick={() => setSelectedAddress(coin.pool)}>
+              ${coin.symbol}
+            </button>
             <button
-              className={`watch ${watched.includes(c.ticker) ? "watched" : ""}`}
-              onClick={() => toggleWatch(c.ticker)}
-              aria-label={`${watched.includes(c.ticker) ? "Unwatch" : "Watch"} ${c.ticker}`}
-              aria-pressed={watched.includes(c.ticker)}
+              className={`watch ${watched.includes(coin.pool) ? "watched" : ""}`}
+              onClick={() =>
+                setWatched((w) =>
+                  w.includes(coin.pool)
+                    ? w.filter((p) => p !== coin.pool)
+                    : [...w, coin.pool],
+                )
+              }
+              aria-label={`${watched.includes(coin.pool) ? "Unwatch" : "Watch"} ${coin.symbol}`}
+              aria-pressed={watched.includes(coin.pool)}
             >
               <Icon name="bell" size={14} />
             </button>
           </div>
-          <span className="coin-name">{c.name}</span>
+          <span className="coin-name">{coin.name}</span>
         </div>
       </div>
     );
   }
+  const price = (coin: LaunchedCoin) =>
+    coin.migrated ? (
+      <span className="muted">On PancakeSwap</span>
+    ) : (
+      <>
+        {formatAmount(coin.currentPrice)}{" "}
+        <span className="quote-unit">{coin.quoteToken.symbol}</span>
+      </>
+    );
+  const counts = (status: string) =>
+    coins.filter((coin) => coinStatus(coin) === status).length;
   return (
     <main id="main" className="board-page">
       <div className="board-heading">
         <div>
           <div className="eyebrow">
-            <span /> THE PRE-IPO PLAYGROUND
+            <span /> LAUNCHED ON ALLO
           </div>
           <h1>
-            Big ideas. <span>Early moves.</span>
+            New coins. <span>Real launches.</span>
           </h1>
-          <p>Discover the coins shadowing tomorrow’s biggest companies.</p>
+          <p>
+            Explore coins launched on BSC testnet, from bonding curve to
+            PancakeSwap.
+          </p>
         </div>
         <Link href="/launch" className="primary-button">
           LAUNCH A COIN <Icon name="arrow" />
@@ -293,22 +304,20 @@ export default function Board() {
       </div>
       <div className="market-strip">
         <div>
-          <span>24H VOLUME</span>
-          <strong>$9.82M</strong>
-          <small className="positive">↗ 12.8%</small>
+          <span>LAUNCHED COINS</span>
+          <strong>{data ? data.total : "—"}</strong>
         </div>
         <div>
-          <span>TOTAL MARKET CAP</span>
-          <strong>$24.96M</strong>
+          <span>ON THE CURVE</span>
+          <strong>{data ? counts("Bonding") : "—"}</strong>
         </div>
         <div>
-          <span>COINS ON THE BOARD</span>
-          <strong>10</strong>
-          <small>AND COUNTING</small>
+          <span>GRADUATED / MIGRATED</span>
+          <strong>
+            {data ? `${counts("Graduated")} / ${counts("Migrated")}` : "—"}
+          </strong>
         </div>
-        <div className="market-note">
-          <i /> THE NEXT CHAPTER STARTS HERE
-        </div>
+        <div className="market-note">BSC TESTNET · CHAIN 97</div>
       </div>
       <div className="board-toolbar">
         <div className="category-tabs" role="group" aria-label="Filter coins">
@@ -319,7 +328,6 @@ export default function Board() {
               onClick={() => setCategory(c)}
               aria-pressed={category === c}
             >
-              {c === "Trending" && <Icon name="fire" size={15} />}{" "}
               {c.toUpperCase()}
             </button>
           ))}
@@ -328,7 +336,7 @@ export default function Board() {
           <label className="search">
             <Icon name="search" size={16} />
             <input
-              placeholder="Ticker or company"
+              placeholder="Name, ticker or address"
               aria-label="Search coins"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -339,6 +347,14 @@ export default function Board() {
               </button>
             )}
           </label>
+          <button
+            className="board-refresh"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            aria-label="Refresh launched coins"
+          >
+            {isFetching ? "UPDATING…" : "↻ REFRESH"}
+          </button>
           <div className="view-toggle">
             <button
               aria-label="Table view"
@@ -359,169 +375,219 @@ export default function Board() {
           </div>
         </div>
       </div>
-      {grid ? (
-        <div className="coin-grid">
-          {filtered.map((c) => (
-            <article className="coin-card" key={c.ticker}>
-              {identity(c)}
-              <span className="company-tag">{c.company}</span>
-              <div className="card-price">
-                ${c.price}
-                <span className={c.changes[3] > 0 ? "positive" : "negative"}>
-                  {c.changes[3] > 0 ? "+" : ""}
-                  {c.changes[3]}%
-                </span>
-              </div>
-              <div className="card-stats">
-                <span>
-                  MARKET CAP<strong>{money(c.mcap)}</strong>
-                </span>
-                <span>
-                  24H VOLUME<strong>{money(c.vol)}</strong>
-                </span>
-              </div>
-              <Curve value={c.curve} />
-            </article>
-          ))}
-        </div>
-      ) : (
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                {[
-                  ["COIN", "ticker"],
-                  ["PRICE", "price"],
-                  ["SHADOWS", ""],
-                  ["IMPLIED VAL.", ""],
-                  ["MCAP", "mcap"],
-                  ["24H VOL", "vol"],
-                  ["HOLDERS", "holders"],
-                  ["LIQ", "liq"],
-                  ["5M", "change0"],
-                  ["1H", "change1"],
-                  ["4H", "change2"],
-                  ["24H", "change3"],
-                  ["CURVE", "curve"],
-                ].map(([title, key]) => (
-                  <th key={title}>
-                    {key ? (
-                      <button
-                        className={sort === key ? "sort-active" : ""}
-                        onClick={() => sortBy(key)}
-                      >
-                        {title}
-                        <span>
-                          {sort === key ? (ascending ? "↑" : "↓") : "↕"}
-                        </span>
-                      </button>
-                    ) : (
-                      title
-                    )}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((c) => (
-                <tr key={c.ticker}>
-                  <td>{identity(c)}</td>
-                  <td>
-                    $
-                    {c.price
-                      .toFixed(c.price < 0.0001 ? 8 : 7)
-                      .replace(/0+$/, "")}
-                  </td>
-                  <td>
-                    <span className="company-tag">{c.company}</span>
-                  </td>
-                  <td className="muted">{c.value}</td>
-                  <td>{money(c.mcap)}</td>
-                  <td>{money(c.vol)}</td>
-                  <td>{c.holders.toLocaleString("en-US")}</td>
-                  <td>{money(c.liq)}</td>
-                  {c.changes.map((v, i) => (
-                    <td key={i} className={v >= 0 ? "positive" : "negative"}>
-                      {v >= 0 ? "+" : ""}
-                      {v}%
-                    </td>
-                  ))}
-                  <td>
-                    <Curve value={c.curve} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {!filtered.length && (
-        <div className="empty-state">
-          <Icon name="search" size={28} />
-          <h2>No coins found</h2>
-          <p>Try another company, ticker, or category.</p>
-          <button
-            onClick={() => {
-              setQuery("");
-              setCategory("Trending");
-            }}
-          >
-            Clear filters →
+      {error && (
+        <div className="board-error" role="alert">
+          <div>
+            <strong>
+              {data
+                ? "Could not refresh coins"
+                : "Could not load launched coins"}
+            </strong>
+            <p>
+              {error.message}
+              {data ? " Showing the last successful snapshot." : ""}
+            </p>
+          </div>
+          <button onClick={() => refetch()} disabled={isFetching}>
+            Try again →
           </button>
         </div>
       )}
+      {isPending ? (
+        <div className="board-loading" role="status">
+          <span>Loading launched coins…</span>
+          {Array.from({ length: 5 }, (_, i) => (
+            <div className="coin-skeleton" key={i}>
+              <i />
+              <span />
+              <span />
+            </div>
+          ))}
+        </div>
+      ) : data && filtered.length > 0 ? (
+        grid ? (
+          <div className="coin-grid">
+            {filtered.map((coin) => (
+              <article className="coin-card" key={coin.pool}>
+                {identity(coin)}
+                <span className="company-tag">{coinStatus(coin)}</span>
+                <div className="card-price launched-card-price">
+                  {price(coin)}
+                </div>
+                <div className="card-stats">
+                  <span>
+                    TOTAL SUPPLY
+                    <strong>{formatAmount(coin.totalSupply)}</strong>
+                  </span>
+                  <span>
+                    CURVE RESERVE
+                    <strong>
+                      {formatAmount(coin.quoteReserve)} {coin.quoteToken.symbol}
+                    </strong>
+                  </span>
+                </div>
+                <Curve coin={coin} />
+                <a
+                  className="pool-link"
+                  href={`${explorer}/address/${coin.pool}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {shortAddress(coin.pool)} ↗
+                </a>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="table-container">
+            <table className="launched-table">
+              <thead>
+                <tr>
+                  {[
+                    ["COIN", "symbol"],
+                    ["CURVE PRICE", ""],
+                    ["QUOTE", ""],
+                    ["TOTAL SUPPLY", ""],
+                    ["CURVE RESERVE", ""],
+                    ["BUY / SELL TAX", ""],
+                    ["STATUS", ""],
+                    ["CURVE", "progressPercent"],
+                    ["LAUNCHED", "index"],
+                    ["CONTRACT", ""],
+                  ].map(([title, key]) => (
+                    <th
+                      key={title}
+                      aria-sort={
+                        key
+                          ? sort === key
+                            ? ascending
+                              ? "ascending"
+                              : "descending"
+                            : "none"
+                          : undefined
+                      }
+                    >
+                      {key ? (
+                        <button
+                          className={sort === key ? "sort-active" : ""}
+                          onClick={() => sortBy(key)}
+                        >
+                          {title}
+                          <span>
+                            {sort === key ? (ascending ? "↑" : "↓") : "↕"}
+                          </span>
+                        </button>
+                      ) : (
+                        title
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((coin) => (
+                  <tr key={coin.pool}>
+                    <td>{identity(coin)}</td>
+                    <td>{price(coin)}</td>
+                    <td>
+                      <span className="company-tag">
+                        {coin.quoteToken.symbol}
+                      </span>
+                    </td>
+                    <td title={coin.totalSupply.formatted}>
+                      {formatAmount(coin.totalSupply)}
+                    </td>
+                    <td title={coin.quoteReserve.formatted}>
+                      {formatAmount(coin.quoteReserve)}{" "}
+                      <span className="quote-unit">
+                        {coin.quoteToken.symbol}
+                      </span>
+                    </td>
+                    <td>
+                      {coin.buyFeeBps / 100}% / {coin.sellFeeBps / 100}%
+                    </td>
+                    <td>
+                      <span
+                        className={`coin-status ${coinStatus(coin).toLowerCase()}`}
+                      >
+                        {coinStatus(coin)}
+                      </span>
+                    </td>
+                    <td>
+                      <Curve coin={coin} />
+                    </td>
+                    <td>
+                      {coin.launch?.timestamp ? (
+                        new Date(
+                          coin.launch.timestamp * 1000,
+                        ).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          timeZone: "UTC",
+                        })
+                      ) : (
+                        <span className="muted">Date unavailable</span>
+                      )}
+                    </td>
+                    <td>
+                      <a
+                        className="pool-link"
+                        href={`${explorer}/address/${coin.pool}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {shortAddress(coin.pool)} ↗
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      ) : data ? (
+        <div className="empty-state">
+          <Icon name="search" size={28} />
+          <h2>
+            {coins.length ? "No matching coins" : "No coins launched yet"}
+          </h2>
+          <p>
+            {coins.length
+              ? "Try another name, ticker, contract address, or filter."
+              : "Launched coins appear here once the backend indexer has picked them up."}
+          </p>
+          {coins.length ? (
+            <button
+              onClick={() => {
+                setQuery("");
+                setCategory("All launches");
+              }}
+            >
+              Clear filters →
+            </button>
+          ) : (
+            <Link href="/launch" className="primary-button">
+              LAUNCH THE FIRST COIN <Icon name="arrow" />
+            </Link>
+          )}
+        </div>
+      ) : null}
       <div className="table-caption">
         <span>
-          SHOWING {filtered.length} OF {coins.length} COINS
+          {data
+            ? `SHOWING ${filtered.length} OF ${data.total} LAUNCHED COINS`
+            : "AWAITING COIN DATA"}
         </span>
         <span>
-          <span className="yellow-dot" /> COMMUNITY COINS. COMPANY-INSPIRED.{" "}
-          <span className="muted">NOT EQUITY.</span>
+          {data?.syncedBlock != null
+            ? `INDEXED THROUGH BLOCK ${data.syncedBlock.toLocaleString("en-US")}`
+            : "INDEXER SYNC PENDING"}{" "}
+          · AUTO-REFRESH 15S
         </span>
       </div>
       {selected && (
-        <div className="modal-backdrop" onClick={() => setSelected(null)}>
-          <section
-            className="coin-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label={`${selected.name} details`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="modal-close"
-              autoFocus
-              onClick={() => setSelected(null)}
-              aria-label="Close coin details"
-            >
-              ×
-            </button>
-            {identity(selected)}
-            <p>A community coin shadowing {selected.company}.</p>
-            <div className="card-price">${selected.price}</div>
-            <div className="card-stats">
-              <span>
-                MARKET CAP<strong>{money(selected.mcap)}</strong>
-              </span>
-              <span>
-                HOLDERS
-                <strong>{selected.holders.toLocaleString("en-US")}</strong>
-              </span>
-            </div>
-            <Curve value={selected.curve} />
-            <p className="muted">
-              Sample market data. Trading is not available in this preview.
-            </p>
-            <button
-              className="primary-button"
-              onClick={() => toggleWatch(selected.ticker)}
-            >
-              {watched.includes(selected.ticker)
-                ? "REMOVE FROM WATCHLIST"
-                : "ADD TO WATCHLIST"}
-            </button>
-          </section>
-        </div>
+        <CoinDetails coin={selected} onClose={() => setSelectedAddress(null)} />
       )}
     </main>
   );

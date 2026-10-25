@@ -152,13 +152,13 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             ? "PROTOCOL DOCUMENTATION"
             : pathname === "/launch"
               ? "LAUNCH SERVICE"
-              : "DEMO MARKET DATA"}{" "}
+              : "LAUNCHED COINS"}{" "}
           <span className="footer-divider">/</span> BSC TESTNET · CHAIN 97
         </span>
         <span>
           BUILT FOR THE NEXT BIG THING.{" "}
           <span className="footer-divider">·</span> ALLO © 2026{" "}
-          <span className="demo-label">DEMO DATA</span>
+          <span className="demo-label">TESTNET</span>
         </span>
       </footer>
     </>

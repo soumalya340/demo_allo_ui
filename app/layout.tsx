@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Allo — The pre-IPO playground",
+  title: "Allo — Launch and discover coins",
   description:
-    "Discover community coins shadowing tomorrow’s biggest companies. Explore the board and launch your own coin on Allo.",
+    "Discover coins launched on Allo. Follow bonding-curve progress and launch your own coin on BSC testnet.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {parseBoardResponse,coinStatus,formatAmount,safeLink} from '../app/lib/board-api.ts';
+const amount={raw:'1000000000000000000',formatted:'1'};
+const coin={chainId:97,pool:'0x'+'1'.repeat(40),index:0,name:'Launched Coin',symbol:'LIVE',quoteToken:{symbol:'BNB'},progressPercent:12.5,graduated:false,migrated:false,currentPrice:amount,totalSupply:amount,quoteReserve:amount,graduationThreshold:amount,buyFeeBps:100,sellFeeBps:200};
+const response=(pools=[])=>({chainId:97,total:pools.length,count:pools.length,offset:0,pools,syncedBlock:null});
+test('accepts empty index and launched coins',()=>{assert.deepEqual(parseBoardResponse(response()).pools,[]);assert.equal(parseBoardResponse(response([coin])).pools[0].symbol,'LIVE')});
+test('rejects wrong chain, incomplete lists, duplicates and malformed records',()=>{assert.throws(()=>parseBoardResponse({...response(),chainId:56}),/97/);assert.throws(()=>parseBoardResponse({...response(),total:2}),/incomplete list/);assert.throws(()=>parseBoardResponse(response([coin,coin])),/duplicate/);assert.throws(()=>parseBoardResponse(response([{...coin,currentPrice:null}])),/incomplete coin/)});
+test('keeps migrated and graduated statuses separate',()=>{assert.equal(coinStatus(coin),'Bonding');assert.equal(coinStatus({...coin,graduated:true}),'Graduated');assert.equal(coinStatus({...coin,graduated:true,migrated:true}),'Migrated')});
+test('formats small prices without turning them into zero, and rejects unsafe metadata links',()=>{assert.equal(formatAmount({...amount,formatted:'0.00000000012'}),'1.200e-10');assert.equal(safeLink('javascript:alert(1)'),undefined);assert.equal(safeLink('https://example.com'),'https://example.com/')});
